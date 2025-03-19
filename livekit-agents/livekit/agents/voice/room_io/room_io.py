@@ -10,9 +10,10 @@ from livekit import rtc
 from ... import utils
 from ...log import logger
 from ...types import ATTRIBUTE_AGENT_STATE, TOPIC_CHAT
+from ...vad import VAD
 from ..events import AgentStateChangedEvent, UserInputTranscribedEvent
 from ..io import AudioInput, AudioOutput, TextOutput, VideoInput
-from ..transcription import TextSynchronizer
+from ..transcription import TextSynchronizer, TextSyncOptions
 
 if TYPE_CHECKING:
     from ..agent_session import AgentSession
@@ -66,6 +67,7 @@ class RoomOutputOptions:
     audio_publish_options: rtc.TrackPublishOptions = field(
         default_factory=lambda: rtc.TrackPublishOptions(source=rtc.TrackSource.SOURCE_MICROPHONE)
     )
+    vad_for_transcription_sync: VAD | None = None
 
 
 DEFAULT_ROOM_INPUT_OPTIONS = RoomInputOptions()
@@ -155,7 +157,11 @@ class RoomIO:
             audio_output = self._audio_output or self._agent_session.output.audio
             if audio_output:
                 self._tr_output_synchronizer = TextSynchronizer(
-                    audio_output, text_output=self._agent_tr_output
+                    audio_output,
+                    text_output=self._agent_tr_output,
+                    sync_options=TextSyncOptions(
+                        vad=self._output_options.vad_for_transcription_sync
+                    ),
                 )
 
         # TODO(theomonnom): ideally we're consistent and every input/output has a start method
